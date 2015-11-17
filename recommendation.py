@@ -52,7 +52,6 @@ def make_user_interest_vector(user_interests):
 
 def most_similar_users_to(user_id):
     try:
-      print user_id
       conn = pg8000.connect(user="arvindram", password="", database="arvindram")
       cur = conn.cursor()
       cur.execute("SELECT u2, sim_index FROM sim_model where u1 = %s",(user_id,))
@@ -111,7 +110,6 @@ def index():
 
 @app.route('/recommendations')
 def recommendation():
-    print "HERE"
     user_index = request.args.get('user')
     suggestions = []
     recommendations = []
@@ -123,13 +121,45 @@ def recommendation():
       if s[0] in business_dict and business_dict[s[0]] != "":
         if {"title":business_dict[s[0]],"url":img_dict[s[0]]} not in suggestions:
           recommendations.append({"title":business_dict[s[0]],"url":img_dict[s[0]],"sim":round(s[1], 2)})
-    return render_template('recommendation.html',recommendations=recommendations[:6], suggestions = suggestions[:6], user_id= user_index)        
+    return render_template('recommendation.html',recommendations=recommendations[:6], suggestions = suggestions[:6], user_id= user_index)
+
+def get_recommendations(user_index):
+    recommendations = []
+    for s in user_based_suggestions(user_index)[:50]:
+      if s[0] in business_dict and business_dict[s[0]] != "":
+        recommendations.append(s[0])
+    return recommendations
+
+def get_actual(user_id):
+    try:
+      conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+      cur = conn.cursor()
+      cur.execute("SELECT asin FROM movies where extract(year from to_timestamp(unixreviewtime)) > '2010' and reviewerid=%s",(user_id,))
+      movies_cur = cur.fetchall()
+      movies = [movie[0] for movie in movies_cur]
+      cur.close()
+      return movies
+    except:  
+      traceback.print_exc()  
+
+
+@app.route('/validate')
+def validate():
+  for user_id, interests in user_dict.iteritems():
+    recommendations = get_recommendations(user_id)
+    actual = get_actual(user_id)
+    # print recommendations
+    # print actual
+    if len(set(recommendations)) != 0:
+      print len(set(recommendations).intersection(set(actual))) , len(set(recommendations)), len(set(recommendations).union(set(actual))), len(set(recommendations).intersection(set(actual))) / len(set(recommendations))
+    
+  return "ok"
 
 if __name__ == '__main__':
   
   global user_dict                     
   user_dict = {}
-  f = open("/Users/arvindram/Documents/DataScience/final_project/movies-py.csv", "r")
+  f = open("/Users/arvindram/Documents/DataScience/final_project/movies-model-py.csv", "r")
   line = f.readline()
   line = f.readline()
   

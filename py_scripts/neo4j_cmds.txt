@@ -1,0 +1,45 @@
+CREATE CONSTRAINT ON (from:Product) ASSERT from.pid IS UNIQUE;
+
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM 
+'file:///Users/rhp/Documents/SBU/product_data_graph.csv' AS line
+
+MERGE (from:Product {pid: line.PID})
+SET from.title = line.Title,
+	from.price = line.Price,
+	from.salesRank = line.SalesRank
+
+-------------------------------------------------------------------------------
+
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM 
+'file:///Users/rhp/Documents/SBU/product_product_relation.csv' AS line
+
+MATCH (from:Product {pid: line.From})
+MATCH (to:Product {pid: line.To})
+
+CREATE (from)-[r:TO]->(to)
+
+SET r.type = line.Type
+-------------------------------------------------------------------------------
+DROP CONSTRAINT ON (from:Product) ASSERT from.pid IS UNIQUE;
+
+START s=node('0000143561'), d=node('B000UMMB5K')
+MATCH p = d-[*..]
+
+
+MATCH (from:Product { pid:"0000143561" }), (to:Product { pid: "B000UMMB5K"}) , path = (from)-[:TO*]->(to)
+RETURN path
+
+MATCH (from:Product { pid:'0000589012' }), (to:Product { pid: B000B8IH10'}) , path = (from)-[:TO*]->(to)
+RETURN path
+
+START from=node(#{start_node_id}), x=node(#{destination_node_id})
+MATCH p = allShortestPaths( a-[:worked_on*]-x )
+RETURN p, extract(person in nodes(p) : person.name)
+
+MATCH (from:Product { pid:'0000143502' }), (to:Product { pid: '6304424434'}) , 
+path = shortestPath(from-[:TO*]->to ) 
+RETURN path
+
+ 

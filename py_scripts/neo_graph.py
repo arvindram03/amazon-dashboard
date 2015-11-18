@@ -18,7 +18,7 @@ for i in xrange(len(f)):
         if min_len == -1 or path_len < min_len:
             min_len = path_len
 
-    if min_len < 5:
+    if min_len < 5 and min_len > 0:
         res.append(f[i])
     min_len = -1
 

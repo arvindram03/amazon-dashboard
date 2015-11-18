@@ -7,6 +7,7 @@ from flask import Flask, request
 from flask import render_template
 import pg8000
 import sys, traceback
+from py2neo import Graph, authenticate, neo4j
 
 app = Flask(__name__, static_url_path='/static')
 
@@ -128,6 +129,8 @@ def get_recommendations(user_index):
     for s in user_based_suggestions(user_index)[:50]:
       if s[0] in business_dict and business_dict[s[0]] != "":
         recommendations.append(s[0])
+    print "ACTUAL",len(recommendations)    
+    print "FILTERED",len(filter_by_path(recommendations, users_interests[user_key.index(user_index)]))    
     return recommendations
 
 def get_actual(user_id):
@@ -142,11 +145,35 @@ def get_actual(user_id):
     except:  
       traceback.print_exc()  
 
+def filter_by_path(recommendations, user_interests):
+  print len(recommendations),len(user_interests)
+  authenticate("localhost:7474", "neo4j", "password")
+  res = []
+  g = Graph()
+  min_len = -1
+  for i in xrange(len(recommendations)):
+    for j in xrange(len(user_interests)):
+        query = "MATCH (from:Product { pid:'" + recommendations[i] + "' }), (to:Product { pid: '" + user_interests[j] + "'}) , path = shortestPath(from-[:TO*]->to ) RETURN path"
+        results = g.cypher.execute(query)
+        path_len = len(str(results).split(":TO")) - 1
+        # print "PATH LEN",path_len
+        if path_len == 0:
+          continue
+        if min_len == -1 or path_len < min_len:
+            min_len = path_len
+    print "MIN LEN",min_len
+    MAX_PATH = 5
+    if min_len < MAX_PATH and min_len != -1:
+        res.append(recommendations[i])
+    min_len = -1
+
+  return res
 
 @app.route('/validate')
 def validate():
   for user_id, interests in user_dict.iteritems():
     recommendations = get_recommendations(user_id)
+
     actual = get_actual(user_id)
     # print recommendations
     # print actual

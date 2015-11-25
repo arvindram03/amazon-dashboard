@@ -118,11 +118,11 @@ def recommendation():
       if s[0] in business_dict and business_dict[s[0]] != "":
         suggestions.append({"title":business_dict[s[0]],"url":img_dict[s[0]]})
 
-    for s in user_based_suggestions(user_index)[:20]:
+    for s in user_based_suggestions(user_index)[:50]:
       if s[0] in business_dict and business_dict[s[0]] != "":
         if {"title":business_dict[s[0]],"url":img_dict[s[0]]} not in suggestions:
           recommendations.append({"title":business_dict[s[0]],"url":img_dict[s[0]],"sim":round(s[1], 2)})
-    return render_template('recommendation.html',recommendations=recommendations[:6], suggestions = suggestions[:6], user_id= user_index)
+    return render_template('recommendation.html',recommendations=recommendations[:10], suggestions = suggestions[:10], user_id= user_index)
 
 def get_recommendations(user_index):
     recommendations = []

@@ -19,6 +19,7 @@
     
     <!--  Light Bootstrap Table core CSS    -->
     <link href="/static/assets/css/light-bootstrap-dashboard.css" rel="stylesheet"/>
+    <link href="/static/assets/css/sidebar.css" rel="stylesheet" />
     
     
     <!--  CSS for Demo Purpose, don't include it in your project     -->
@@ -42,20 +43,12 @@
 </head>
 <body> 
 
-<div class="wrapper">
-    <div class="sidebar" data-color="purple" data-image="/static/assets/img/sidebar-6.jpg">    
-    
-    <!--   
-        
-        Tip 1: you can change the color of the sidebar using: data-color="blue | azure | green | orange | red | purple" 
-        Tip 2: you can also add an image using data-image tag
-        
-    -->
-    
-    	<div class="sidebar-wrapper">
+<div id="wrapper"> 
+    <div id="sidebar-wrapper" class="sidebar" data-color="orange" data-image="/static/assets/img/logo.png">    
+        <div class="sidebar-wrapper">
             <div class="logo">
                 <a href="http://www.amazon.com" class="simple-text">
-                    Recommendations
+                   Movie Recommendations
                 </a>
             </div>
                        
@@ -73,26 +66,17 @@
                     </a>            
                 </li>
             </ul> 
-    	</div>
+        </div>
     </div>
-    
     <div class="main-panel">
         <nav class="navbar navbar-default navbar-fixed">
             <div class="container-fluid">    
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navigation-example-2">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="/static/index.html">Dashboard</a>
-                </div>
+                
                 <div class="collapse navbar-collapse">       
                     <ul class="nav navbar-nav navbar-left">
-                        <li>
+                        <li id="menu-toggle">
                             <a href="/static/index.html" class="dropdown-toggle" data-toggle="dropdown">
-                                <i class="fa fa-dashboard"></i>
+                                <i class="fa fa-bars"></i>&nbsp;&nbsp;Menu
                             </a>
                         </li>
                     </ul>
@@ -130,7 +114,7 @@
                 </div>
                 </br>
 
-                <h3>Top picks based on Similar Users</h3>
+                <h3>Top picks from Similar Users</h3>
                 <div class="ui fluid cards">
 
                 {% for r in recommendations %}
@@ -151,7 +135,7 @@
                 {% endfor %}
 
                 </div>
-            <h3>Top picks based on Popular Movies</h3>
+            <h3>Top picks from Popular Movies</h3>
                 <div class="ui fluid cards">
 
                 {% for s in suggestions %}
@@ -216,6 +200,10 @@
             var searchTerm = document.getElementById('search').value;
             window.location.replace("/recommendations?user="+searchTerm);
         }
+        $("#menu-toggle").click(function(e) {
+            e.preventDefault();
+            $("#wrapper").toggleClass("toggled");
+        });
     </script>
     
 </html>

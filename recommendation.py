@@ -126,11 +126,10 @@ def recommendation():
 
 def get_recommendations(user_index):
     recommendations = []
-    for s in user_based_suggestions(user_index)[:50]:
+    for s in user_based_suggestions(user_index)[:100]:
       if s[0] in business_dict and business_dict[s[0]] != "":
         recommendations.append(s[0])
-    print "ACTUAL",len(recommendations)    
-    print "FILTERED",len(filter_by_path(recommendations, users_interests[user_key.index(user_index)]))    
+    
     return recommendations
 
 def get_actual(user_id):
@@ -145,12 +144,27 @@ def get_actual(user_id):
     except:  
       traceback.print_exc()  
 
+
+def filter_by_price(recommendations, user_id):
+  if user_id in price_dict:
+    res = []
+    (low, high) = price_dict[user_id]
+    for r in recommendations:
+      price = business_p_dict[r] 
+      if price != 0 and low <= price <= high:
+        res.append(r)
+    return res    
+  else:
+    return recommendations  
+
+
 def filter_by_path(recommendations, user_interests):
-  print len(recommendations),len(user_interests)
+  # print len(recommendations),len(user_interests)
   authenticate("localhost:7474", "neo4j", "password")
   res = []
   g = Graph()
   min_len = -1
+  MAX_PATH = 4
   for i in xrange(len(recommendations)):
     for j in xrange(len(user_interests)):
         query = "MATCH (from:Product { pid:'" + recommendations[i] + "' }), (to:Product { pid: '" + user_interests[j] + "'}) , path = shortestPath(from-[:TO*]->to ) RETURN path"
@@ -159,10 +173,13 @@ def filter_by_path(recommendations, user_interests):
         # print "PATH LEN",path_len
         if path_len == 0:
           continue
-        if min_len == -1 or path_len < min_len:
-            min_len = path_len
-    print "MIN LEN",min_len
-    MAX_PATH = 5
+        if path_len < MAX_PATH:
+          min_len = path_len
+          break
+        # if min_len == -1 or path_len < min_len:
+        #     min_len = path_len
+    # print "MIN LEN",min_len
+     
     if min_len < MAX_PATH and min_len != -1:
         res.append(recommendations[i])
     min_len = -1
@@ -171,19 +188,40 @@ def filter_by_path(recommendations, user_interests):
 
 @app.route('/validate')
 def validate():
+  actual_count = 0
+  filtered_count = 0
   for user_id, interests in user_dict.iteritems():
-    recommendations = get_recommendations(user_id)
-
     actual = get_actual(user_id)
-    # print recommendations
-    # print actual
+    recommendations = get_recommendations(user_id)
+    actual_c = len(recommendations)    
+    actual_count += actual_c
+    # print "ACTUAL", actual_c
     if len(set(recommendations)) != 0:
       print len(set(recommendations).intersection(set(actual))) , len(set(recommendations)), len(set(recommendations).union(set(actual))), len(set(recommendations).intersection(set(actual))) / len(set(recommendations))
+
+    reco_after_price = filter_by_price(recommendations, user_id)
+    filtered_price_count = actual_c - len(reco_after_price)    
+    # print "FILTERED_Price", filtered_price_count
+    filtered_count += filtered_price_count
+
+    if len(set(reco_after_price)) != 0:
+      print len(set(reco_after_price).intersection(set(actual))) , len(set(reco_after_price)), len(set(reco_after_price).union(set(actual))), len(set(reco_after_price).intersection(set(actual))) / len(set(reco_after_price))  
+
     
+    reco_after_path = filter_by_path(reco_after_price, users_interests[user_key.index(user_id)])
+    filtered_path_count = len(reco_after_price) - len(reco_after_path)    
+    # print "FILTERED_PATH", filtered_path_count
+    filtered_count += filtered_path_count  
+    
+    # print actual_c, filtered_price_count, filtered_path_count
+    if len(set(reco_after_path)) != 0:
+      print len(set(reco_after_path).intersection(set(actual))) , len(set(reco_after_path)), len(set(reco_after_path).union(set(actual))), len(set(reco_after_path).intersection(set(actual))) / len(set(reco_after_path))
+    
+    print "\n"    
+  print "T_ACTUAL",actual_count, "T_FILTERED", filtered_count   
   return "ok"
 
 if __name__ == '__main__':
-  
   global user_dict                     
   user_dict = {}
   f = open("/Users/arvindram/Documents/DataScience/final_project/movies-model-py.csv", "r")
@@ -202,9 +240,28 @@ if __name__ == '__main__':
 
   f.close()
   
+  global price_dict                     
+  price_dict = {}
+  f = open("/Users/arvindram/amazon-dashboard/data_extract/reviewerid_prices_percentiles.csv", "r")
+  line = f.readline()
+  line = f.readline()
+  
+  while line:
+    parts = line.split(",")
+    user_id = parts[0]
+    parts[4] = parts[4].replace('\n','')
+    if parts[1] != parts[3] and int(parts[4]) >1:
+      p_range = (float(parts[1]), float(parts[3]))
+      price_dict[user_id] = p_range 
+    line = f.readline()
+
+  f.close()
+
   print "Reading movie titles..."
   global business_dict
   business_dict = {}
+  global business_p_dict
+  business_p_dict = {}
   global img_dict
   img_dict = {}
   f = open("/Users/arvindram/Documents/DataScience/final_project/movies-meta-py.csv", "r")
@@ -212,12 +269,19 @@ if __name__ == '__main__':
   line = f.readline()
 
   while line:
-    parts = line.split(",")
+    parts = line.split("\t")
     
     business_id = parts[0]
     name = parts[1].replace('"','')
-    url = parts[2].replace('\n','')
     business_dict[business_id] = name
+
+    if parts[2] == "":
+      business_p_dict[business_id] = 0
+    else:
+      business_p_dict[business_id] = float(parts[2])
+
+    url = parts[3].replace('\n','')
+    
     img_dict[business_id] = url
     line = f.readline()  
 

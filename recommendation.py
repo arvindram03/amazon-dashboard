@@ -217,6 +217,20 @@ def validate():
     if len(set(reco_after_path)) != 0:
       print len(set(reco_after_path).intersection(set(actual))) , len(set(reco_after_path)), len(set(reco_after_path).union(set(actual))), len(set(reco_after_path).intersection(set(actual))) / len(set(reco_after_path))
     
+
+    try:
+      conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+      for r in reco_after_path:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO suggestions (user_id,movie) VALUES (%s, %s)",((user_id,r)))
+        conn.commit()
+        cur.close()
+
+      conn.close()    
+    except:
+      traceback.print_exc()
+      print "ERR"
+      print sys.exc_info()[0]  
     print "\n"    
   print "T_ACTUAL",actual_count, "T_FILTERED", filtered_count   
   return "ok"

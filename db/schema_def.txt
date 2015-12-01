@@ -1,0 +1,19 @@
+CREATE TABLE sim_model(
+u1 text,
+u2 text,
+sim_index text,
+PRIMARY KEY(u1,u2)
+);
+
+
+CREATE TABLE movies (
+reviewerID text,
+asin text,
+overall int,
+unixReviewTime bigint
+);
+
+ 
+COPY movies FROM '/Users/rhp/Documents/SBU/3Data Science/Course Project/amazon-dashboard/db/movies-db.csv' DELIMITER ',' csv header;
+
+COPY sim_model FROM '/Users/rhp/Documents/SBU/3Data Science/Course Project/amazon-dashboard/db/sim-model-db.csv' DELIMITER ',' CSV header;

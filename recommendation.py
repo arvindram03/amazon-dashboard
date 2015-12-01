@@ -219,7 +219,7 @@ def validate():
     
 
     try:
-      conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+      conn = pg8000.connect(user="rhp", password="", database="rhp")
       for r in reco_after_path:
         cur = conn.cursor()
         cur.execute("INSERT INTO suggestions (user_id,movie) VALUES (%s, %s)",((user_id,r)))
@@ -238,7 +238,7 @@ def validate():
 if __name__ == '__main__':
   global user_dict                     
   user_dict = {}
-  f = open("/Users/arvindram/Documents/DataScience/final_project/movies-model-py.csv", "r")
+  f = open("./db/movies-model-py.csv", "r")
   line = f.readline()
   line = f.readline()
   
@@ -256,7 +256,7 @@ if __name__ == '__main__':
   
   global price_dict                     
   price_dict = {}
-  f = open("/Users/arvindram/amazon-dashboard/data_extract/reviewerid_prices_percentiles.csv", "r")
+  f = open("./data_extract/reviewerid_prices_percentiles.csv", "r")
   line = f.readline()
   line = f.readline()
   
@@ -278,7 +278,7 @@ if __name__ == '__main__':
   business_p_dict = {}
   global img_dict
   img_dict = {}
-  f = open("/Users/arvindram/Documents/DataScience/final_project/movies-meta-py.csv", "r")
+  f = open("./db/movies-meta-py.csv", "r")
   line = f.readline()
   line = f.readline()
 

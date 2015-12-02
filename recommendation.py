@@ -11,26 +11,59 @@ from py2neo import Graph, authenticate, neo4j
 
 app = Flask(__name__, static_url_path='/static')
 
+def get_review_dist(user_id):
+  try:
+    conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+    cur = conn.cursor()
+    cur.execute("select overall, count(*)  from movies where reviewerid = %s group by overall order by overall",(user_id,))
+    reviews = cur.fetchall()
+    cur.close()
+    review_dist = {}
+    for review in reviews:
+      review_dist[review[0]] = review[1]
+    print review_dist  
+    return review_dist
+  except:  
+    traceback.print_exc()
 
-usr_obj = {}
+def get_review_day_dist(user_id):
+  try:
+    conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+    cur = conn.cursor()
+    cur.execute("select EXTRACT(dow from to_timestamp(unixreviewtime)::date) as day, round(count(*)/cast((select count(*) from movies where reviewerID='ANCOMAI0I7LVG') as numeric),2) as tot from movies where reviewerID=%s group by day order by day",(user_id,))
+    reviews = cur.fetchall()
+    cur.close()
+    review_day_dist = {}
+    for review in reviews:
+      review_day_dist[int(review[0])] = float(review[1])
+    print review_day_dist  
+    return review_day_dist
+  except:  
+    traceback.print_exc()
 
-data = [[[760, 801, 848, 895, 965], [733, 853, 939, 980, 1080], [714, 762, 817, 870, 918], [724, 802, 806, 871, 950]],
-    [[12, 20, 34, 10, 23], [34, 24, 12, 45, 34], [13, 46, 2, 3, 6], [33, 43, 10, 19, 18]],
-        [[67, 45, 78, 67, 68], [95, 54, 45, 68, 78], [13, 46, 2, 3, 6], [33, 43, 10, 19, 18]]]
+def get_review_year_dist(user_id):
+  try:
+    conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+    cur = conn.cursor()
+    cur.execute("select EXTRACT(year from to_timestamp(unixreviewtime)::date) as year, count(*) as tot from movies where reviewerID=%s group by year order by year",(user_id,))
+    reviews = cur.fetchall()
+    cur.close()
+    review_year_dist = []
+    for review in reviews:
+      review_year_dist.append((int(review[0]),review[1]))
+    print review_year_dist  
+    return review_year_dist
+  except:  
+    traceback.print_exc()    
 
 @app.route('/user')
 def users():
-  usr_obj["uid"] = request.args.get('id')
-  usr_obj["box"] = {}
-  usr_obj["box"]["data"] = data[random.randint(0, 2)]
-
-  usr_obj["box"]["outlier_data"] = [
-                    [0, 644],
-                    [4, 718],
-                    [4, 951],
-                    [4, 969]
-                  ]
-  return json.dumps(usr_obj)
+  user_data = {}
+  user_data["uid"] = request.args.get('id')
+  user_data["review_dist"] = get_review_dist(user_data["uid"])
+  user_data["review_day"] = get_review_day_dist(user_data["uid"])
+  user_data["review_time"] = get_review_year_dist(user_data["uid"])
+  return json.dumps(user_data)
 
 
 def most_popular_new_interests(user_id, max_results=10):
@@ -144,6 +177,12 @@ def get_actual(user_id):
     except:  
       traceback.print_exc()  
 
+def filter_by_review_ratio(recommendations):
+  res = []
+  for r in recommendations:
+    if movie_rev_ratio_dict[r] >= 2:
+      res.append(r)    
+  return res
 
 def filter_by_price(recommendations, user_id):
   if user_id in price_dict:
@@ -191,13 +230,19 @@ def validate():
   actual_count = 0
   filtered_count = 0
   for user_id, interests in user_dict.iteritems():
+    print user_id
     actual = get_actual(user_id)
     recommendations = get_recommendations(user_id)
     actual_c = len(recommendations)    
     actual_count += actual_c
     # print "ACTUAL", actual_c
+    #len(set(recommendations).union(set(actual))),
+
     if len(set(recommendations)) != 0:
-      print len(set(recommendations).intersection(set(actual))) , len(set(recommendations)), len(set(recommendations).union(set(actual))), len(set(recommendations).intersection(set(actual))) / len(set(recommendations))
+      print len(set(recommendations).intersection(set(actual))) , len(set(recommendations)), len(set(recommendations).intersection(set(actual))) / len(set(recommendations))
+    if len(set(recommendations).intersection(set(actual))) == 0:
+      print "\n"
+      continue
 
     reco_after_price = filter_by_price(recommendations, user_id)
     filtered_price_count = actual_c - len(reco_after_price)    
@@ -205,8 +250,10 @@ def validate():
     filtered_count += filtered_price_count
 
     if len(set(reco_after_price)) != 0:
-      print len(set(reco_after_price).intersection(set(actual))) , len(set(reco_after_price)), len(set(reco_after_price).union(set(actual))), len(set(reco_after_price).intersection(set(actual))) / len(set(reco_after_price))  
-
+      print len(set(reco_after_price).intersection(set(actual))) , len(set(reco_after_price)), len(set(reco_after_price).intersection(set(actual))) / len(set(reco_after_price))  
+    if len(set(reco_after_price).intersection(set(actual))) == 0:
+      print "\n"
+      continue
     
     reco_after_path = filter_by_path(reco_after_price, users_interests[user_key.index(user_id)])
     filtered_path_count = len(reco_after_price) - len(reco_after_path)    
@@ -215,22 +262,31 @@ def validate():
     
     # print actual_c, filtered_price_count, filtered_path_count
     if len(set(reco_after_path)) != 0:
-      print len(set(reco_after_path).intersection(set(actual))) , len(set(reco_after_path)), len(set(reco_after_path).union(set(actual))), len(set(reco_after_path).intersection(set(actual))) / len(set(reco_after_path))
+      print len(set(reco_after_path).intersection(set(actual))) , len(set(reco_after_path)), len(set(reco_after_path).intersection(set(actual))) / len(set(reco_after_path))
+    if len(set(reco_after_path).intersection(set(actual))) == 0:
+      print "\n"
+      continue
+    reco_after_ratio = filter_by_review_ratio(reco_after_path)
+    filtered_ratio_count = len(reco_after_path) - len(reco_after_ratio)    
+    # print "FILTERED_PATH", filtered_path_count
+    filtered_count += filtered_ratio_count  
     
+    # print actual_c, filtered_price_count, filtered_path_count
+    if len(set(reco_after_ratio)) != 0:
+      print len(set(reco_after_ratio).intersection(set(actual))) , len(set(reco_after_ratio)), len(set(reco_after_ratio).intersection(set(actual))) / len(set(reco_after_ratio))
+    # try:
+    #   conn = pg8000.connect(user="arvindram", password="", database="arvindram")
+    #   for r in reco_after_ratio:
+    #     cur = conn.cursor()
+    #     cur.execute("INSERT INTO suggestions_final (user_id,movie) VALUES (%s, %s)",((user_id,r)))
+    #     conn.commit()
+    #     cur.close()
 
-    try:
-      conn = pg8000.connect(user="rhp", password="", database="rhp")
-      for r in reco_after_path:
-        cur = conn.cursor()
-        cur.execute("INSERT INTO suggestions (user_id,movie) VALUES (%s, %s)",((user_id,r)))
-        conn.commit()
-        cur.close()
-
-      conn.close()    
-    except:
-      traceback.print_exc()
-      print "ERR"
-      print sys.exc_info()[0]  
+    #   conn.close()    
+    # except:
+    #   traceback.print_exc()
+    #   print "ERR"
+    #   print sys.exc_info()[0]  
     print "\n"    
   print "T_ACTUAL",actual_count, "T_FILTERED", filtered_count   
   return "ok"
@@ -301,6 +357,21 @@ if __name__ == '__main__':
 
   f.close()
   
+  global movie_rev_ratio_dict
+  movie_rev_ratio_dict = {}
+  f = open("/Users/arvindram/Documents/DataScience/final_project/ratio_complete.csv", "r")
+  line = f.readline()
+  line = f.readline()
+
+  while line:
+    parts = line.split(",")
+    asin = parts[0]
+    ratio = float(parts[1].replace('\n','').replace('\r',''))
+    movie_rev_ratio_dict[asin] = ratio
+    line = f.readline()
+
+  f.close()  
+
   print "Computing user interests..."
   global user_key
   global users_interests

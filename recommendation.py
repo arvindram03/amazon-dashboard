@@ -21,7 +21,7 @@ def get_review_dist(user_id):
     review_dist = {}
     for review in reviews:
       review_dist[review[0]] = review[1]
-    print review_dist  
+    # print review_dist  
     return review_dist
   except:  
     traceback.print_exc()
@@ -30,13 +30,13 @@ def get_review_day_dist(user_id):
   try:
     conn = pg8000.connect(user="arvindram", password="", database="arvindram")
     cur = conn.cursor()
-    cur.execute("select EXTRACT(dow from to_timestamp(unixreviewtime)::date) as day, round(count(*)/cast((select count(*) from movies where reviewerID='ANCOMAI0I7LVG') as numeric),2) as tot from movies where reviewerID=%s group by day order by day",(user_id,))
+    cur.execute("select EXTRACT(dow from to_timestamp(unixreviewtime)::date) as day, round(count(*)/cast((select count(*) from movies where reviewerID=%s) as numeric),2) as tot from movies where reviewerID=%s group by day order by day",(user_id,user_id,))
     reviews = cur.fetchall()
     cur.close()
     review_day_dist = {}
     for review in reviews:
       review_day_dist[int(review[0])] = float(review[1])
-    print review_day_dist  
+    # print review_day_dist  
     return review_day_dist
   except:  
     traceback.print_exc()
@@ -51,10 +51,24 @@ def get_review_year_dist(user_id):
     review_year_dist = []
     for review in reviews:
       review_year_dist.append((int(review[0]),review[1]))
-    print review_year_dist  
+    # print review_year_dist  
     return review_year_dist
   except:  
     traceback.print_exc()    
+
+def get_sim_users(user_id):
+  users = user_based_suggestions(user_id)
+  print "really ?",len(users)
+  users = users[:100]
+  sim_dict= {}
+  sim_dict[users[59][0]] = round(users[59][1],2) 
+  sim_dict[users[29][0]] = round(users[29][1],2) 
+  sim_dict[users[19][0]] = round(users[19][1],2) 
+  sim_dict[users[0][0]] = round(users[0][1],2) 
+  sim_dict[users[9][0]] = round(users[9][1],2) 
+  sim_dict[users[99][0]] = round(users[99][1],2) 
+  print sim_dict
+  return sim_dict
 
 @app.route('/user')
 def users():
@@ -63,6 +77,7 @@ def users():
   user_data["review_dist"] = get_review_dist(user_data["uid"])
   user_data["review_day"] = get_review_day_dist(user_data["uid"])
   user_data["review_time"] = get_review_year_dist(user_data["uid"])
+  user_data["sim_users"] = get_sim_users(user_data["uid"])
   return json.dumps(user_data)
 
 
@@ -145,17 +160,34 @@ def index():
 @app.route('/recommendations')
 def recommendation():
     user_index = request.args.get('user')
+    filter_level = int(request.args.get('filter'))
+    print "filter",filter_level
     suggestions = []
     recommendations = []
+    reco = []
     for s in most_popular_new_interests(user_index):
       if s[0] in business_dict and business_dict[s[0]] != "":
         suggestions.append({"title":business_dict[s[0]],"url":img_dict[s[0]]})
 
-    for s in user_based_suggestions(user_index)[:50]:
+    for s in user_based_suggestions(user_index)[:100]:
       if s[0] in business_dict and business_dict[s[0]] != "":
         if {"title":business_dict[s[0]],"url":img_dict[s[0]]} not in suggestions:
-          recommendations.append({"title":business_dict[s[0]],"url":img_dict[s[0]],"sim":round(s[1], 2)})
-    return render_template('recommendation.html',recommendations=recommendations[:10], suggestions = suggestions[:10], user_id= user_index)
+          reco.append(s[0])
+          # recommendations.append({"title":business_dict[s[0]],"url":img_dict[s[0]],"sim":round(s[1], 2)})
+    
+    if filter_level >= 2:
+      reco = filter_by_price(reco, user_index)
+
+    if filter_level >= 3:
+      reco = filter_by_path(reco, users_interests[user_key.index(user_index)])  
+
+    if filter_level >= 4:
+      reco = filter_by_review_ratio(reco)  
+
+    for r in reco:
+      recommendations.append({"title":business_dict[r],"url":img_dict[r]})          
+    
+    return render_template('recommendation.html',recommendations=recommendations[:100], suggestions = suggestions[:100], user_id= user_index, filter=filter_level, count=len(recommendations[:100]))
 
 def get_recommendations(user_index):
     recommendations = []
@@ -203,7 +235,7 @@ def filter_by_path(recommendations, user_interests):
   res = []
   g = Graph()
   min_len = -1
-  MAX_PATH = 4
+  MAX_PATH = 3
   for i in xrange(len(recommendations)):
     for j in xrange(len(user_interests)):
         query = "MATCH (from:Product { pid:'" + recommendations[i] + "' }), (to:Product { pid: '" + user_interests[j] + "'}) , path = shortestPath(from-[:TO*]->to ) RETURN path"

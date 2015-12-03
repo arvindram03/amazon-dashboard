@@ -47,7 +47,7 @@
     <div id="sidebar-wrapper" class="sidebar" data-color="orange" data-image="/static/assets/img/logo.png">    
         <div class="sidebar-wrapper">
             <div class="logo">
-                <a href="http://www.amazon.com" class="simple-text">
+                <a href="http://www.amazon.com/s/ref=nb_sb_ss_c_0_3?url=search-alias%3Dmovies-tv&field-keywords=movies&sprefix=movies%2Caps%2C136" class="simple-text" target="_blank">
                    Movie Recommendations
                 </a>
             </div>
@@ -101,20 +101,29 @@
         <div class="content">
             <div class="container-fluid">
                 <div class="row">
-                    <div class="col-lg-8 col-lg-offset-2">
-                        
+                    <div class="col-lg-3  col-lg-offset-1">
+                        <select id="filter" class="form-control">
+                              <option value="1" {%print "selected" if filter == 1 %}>Social Filtering - Level1</option>
+                              <option value="2" {%print "selected" if filter == 2 %}>Personal Filtering - Level2</option>
+                              <option value="3" {%print "selected" if filter == 3 %}>Hybrid Filtering - Level3</option>
+                              <option value="4" {%print "selected" if filter == 4 %}>Item Filtering - Level4</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-7">
                         <div class="input-group">
                           <input id="search" type="text" class="form-control" onkeypress="checkKeyPress(event);" placeholder="Search for..." value="{{user_id}}">
-                          <span class="input-group-btn">
+                          
+                          
+                        <span class="input-group-btn">
                             <button class="btn btn-primary" type="button" onclick="send_req();">Recommend</button>
                           </span>
-                        </div><!-- /input-group -->
-                    </div><!-- /.col-lg-6 -->
+                        </div>
+                    </div>
                 
                 </div>
                 </br>
 
-                <h3>Top picks from Similar Users</h3>
+                <h3>Top picks from Similar Users - {{count}}</h3>
                 <div class="ui fluid cards">
 
                 {% for r in recommendations %}
@@ -124,12 +133,6 @@
                         </a>
                         <div class="content">
                           <div class="header">{{ r.title }}</div>
-                        </div>
-                        <div class="extra content">
-                            <a>
-                                <i class="user icon"></i>
-                                Sim Score : {{r.sim}}
-                            </a>
                         </div>
                     </div>
                 {% endfor %}
@@ -197,8 +200,9 @@
             }
         }
         function send_req() {
+            var filter = document.getElementById('filter').value
             var searchTerm = document.getElementById('search').value;
-            window.location.replace("/recommendations?user="+searchTerm);
+            window.location.replace("/recommendations?user="+searchTerm+"&filter="+filter);
         }
         $("#menu-toggle").click(function(e) {
             e.preventDefault();

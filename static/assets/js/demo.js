@@ -15,6 +15,58 @@ demo = {
             }
         });
     },
+    initSpiderWeb: function(sim_users) {
+      $(function () {
+          console.log(sim_users);
+          var user_ids = [];
+          var sim_indices = [];
+          for (var user_id in sim_users) {
+            user_ids.push(user_id);
+            sim_indices.push(sim_users[user_id]);
+          }
+          $('#simUsers').highcharts({
+
+              chart: {
+                  polar: true,
+                  type: 'line'
+              },
+
+              title: {
+                  text: 'Similar Users',
+              },
+
+              pane: {
+                  size: '80%'
+              },
+
+              xAxis: {
+                  categories: user_ids,
+                  tickmarkPlacement: 'on',
+                  lineWidth: 0
+              },
+
+              yAxis: {
+                  gridLineInterpolation: 'polygon',
+                  lineWidth: 0,
+                  min: 0
+              },
+
+              tooltip: {
+                  shared: true,
+                  pointFormat: '<span style="color:{series.color}">{series.name}: <b>{point.y:,.0f}</b><br/>'
+              },
+              credits: {
+                    enabled: false
+              },
+              series: [{
+                  name: 'Similarity Factor',
+                  data: sim_indices,
+                  pointPlacement: 'on'
+              }]
+
+          });
+      });
+    },
     initBubblePlot: function(review_time) {
       
       $(function () {
@@ -22,9 +74,6 @@ demo = {
           for (var i=0;i<review_time.length;i++) {
             parts = review_time[i].toString().split(",");
             review_data.push({ x: parseInt(parts[0]), y: parseInt(parts[1]), z: parseInt(parts[1]), name: parts[1], country: '' });
-          }
-          for (var i=0;i<review_time.length;i++) {
-            console.log(review_data[i]);
           }
           $('#reviewTime').highcharts({
 
@@ -71,6 +120,9 @@ demo = {
                           format: '{point.name}'
                       }
                   }
+              },
+              credits: {
+                    enabled: false
               },
               series: [{
                   data: review_data
